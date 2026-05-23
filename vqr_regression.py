@@ -3,6 +3,7 @@ import time
 
 # --- Configurazione per forzare la finestra esterna dei grafici ---
 import matplotlib
+
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -13,6 +14,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.decomposition import PCA
 
 # --- Moduli Quantistici ---
 from qiskit.circuit.library import zz_feature_map, real_amplitudes
@@ -22,27 +24,52 @@ from qiskit_machine_learning.algorithms.regressors import VQR
 
 
 # ==========================================
-# 1. PREPROCESSING DATI
+# 1. PREPROCESSING DATI (Dal tuo data_preprocessing.py)
 # ==========================================
-def get_prepared_data(n_qubits=4):
+def load_and_preprocess_diabetes(n_qubits=4, test_size=0.2, random_state=42):
+    # 1. Caricamento del dataset da scikit-learn
     diabetes = load_diabetes()
-    X, y = diabetes.data, diabetes.target
+    X = diabetes.data
+    y_reg = diabetes.target  # Target continuo (per regressione)
 
-    # 1. Scaliamo i dati classici originali
-    X_scaled = StandardScaler().fit_transform(X)
+    # 2. Creazione Target binario (per eventuale classificazione - VQC)
+    median_val = np.median(y_reg)
+    y_class = (y_reg > median_val).astype(int)
 
-    # 2. Riduciamo le feature al numero di qubit disponibili
-    from sklearn.decomposition import PCA
-    X_pca = PCA(n_components=n_qubits).fit_transform(X_scaled)
+    # 3. Standardizzazione delle feature
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    # 3. Scaliamo tra 0 e 1 per gli angoli di rotazione quantistica
-    X_q = MinMaxScaler(feature_range=(0, 1)).fit_transform(X_pca)
+    # 4. Riduzione dimensionale con PCA (10 feature -> n_qubits)
+    pca = PCA(n_components=n_qubits)
+    X_pca = pca.fit_transform(X_scaled)
 
-    return train_test_split(X_q, y, test_size=0.2, random_state=42)
+    # 5. Adattamento per i circuiti quantistici (Quantum Feature Map)
+    minmax = MinMaxScaler(feature_range=(0, 1))
+    X_quantum_ready = minmax.fit_transform(X_pca)
+
+    # 6. Split in Train e Test set per entrambi i modelli
+    X_train, X_test, y_class_train, y_class_test, y_reg_train, y_reg_test = train_test_split(
+        X_quantum_ready, y_class, y_reg, test_size=test_size, random_state=random_state
+    )
+
+    # Stampa la varianza spiegata per inserirla nella relazione
+    print(f"Dataset originale: {X.shape[1]} features.")
+    print(f"Varianza spiegata da {n_qubits} componenti principali (qubit): {sum(pca.explained_variance_ratio_):.2%}")
+
+    return {
+        "classification": (X_train, X_test, y_class_train, y_class_test),
+        "regression": (X_train, X_test, y_reg_train, y_reg_test),
+        "median_threshold": median_val
+    }
 
 
+# Richiamiamo la tua funzione
 num_qubits = 4
-X_train, X_test, y_train, y_test = get_prepared_data(n_qubits=num_qubits)
+data_dict = load_and_preprocess_diabetes(n_qubits=num_qubits)
+
+# Estraiamo SOLTANTO i dati di regressione per questo specifico script
+X_train, X_test, y_train, y_test = data_dict["regression"]
 
 # ==========================================
 # 2. SCALING DEL TARGET (Fondamentale)
@@ -53,7 +80,7 @@ y_train_scaled = y_scaler.fit_transform(y_train.reshape(-1, 1)).ravel()
 # ==========================================
 # 3. BENCHMARK CLASSICO
 # ==========================================
-print("--- 1. Addestramento Modelli Classici ---")
+print("\n--- 1. Addestramento Modelli Classici ---")
 # Regressione Lineare
 lin_reg = LinearRegression().fit(X_train, y_train)
 pred_lin = lin_reg.predict(X_test)
@@ -68,30 +95,25 @@ print(f"Regressione Lineare -> MSE: {mse_lin:.2f}")
 print(f"Random Forest       -> MSE: {mse_rf:.2f}")
 
 # ==========================================
-# 4. CONFIGURAZIONE QUANTISTICA BASE
+# 4. CONFIGURAZIONE QUANTISTICA BASE E OOP WRAPPER
 # ==========================================
 estimator = StatevectorEstimator()
 feature_map = zz_feature_map(feature_dimension=num_qubits, reps=2, entanglement='linear')
 
 
 # --- LA SOLUZIONE ELEGANTE (OOP Wrapper) ---
-# Creiamo una nostra versione di COBYLA che registra la funzione di costo (Loss)
-# senza usare hack o modifiche forzate. Eredita tutto dal COBYLA originale.
 class TrackedCOBYLA(COBYLA):
     def __init__(self, loss_history_list, **kwargs):
         super().__init__(**kwargs)
         self.loss_history_list = loss_history_list
 
     def minimize(self, fun, x0, jac=None, bounds=None, *args, **kwargs):
-        # Questa funzione "avvolge" la valutazione matematica del circuito
         def wrapped_fun(x):
             val = fun(x)
-            # Salviamo il numero puro (estraendolo se è un formato numpy)
             val_scalar = val.item() if hasattr(val, 'item') else val
             self.loss_history_list.append(val_scalar)
             return val
 
-        # Passiamo la nostra funzione avvolta all'ottimizzatore vero e proprio
         return super().minimize(wrapped_fun, x0, jac=jac, bounds=bounds, *args, **kwargs)
 
 
@@ -117,13 +139,11 @@ for name, depth, opt_type in runs:
 
     loss_history = []
 
-    # Assegnazione dinamica dell'ottimizzatore (Ricreato nuovo ogni volta!)
+    # Assegnazione dinamica dell'ottimizzatore
     if opt_type == "COBYLA":
-        # Usiamo la nostra classe custom passandogli la lista vuota da riempire
         optimizer = TrackedCOBYLA(loss_history_list=loss_history, maxiter=80)
-        callback = None  # Non ci serve il callback di Qiskit, fa tutto la classe
+        callback = None
     else:
-        # Per SPSA usiamo l'ottimizzatore standard
         optimizer = SPSA(maxiter=80)
 
 
@@ -145,8 +165,10 @@ for name, depth, opt_type in runs:
     vqr.fit(X_train, y_train_scaled)
     print(f"  Completato in {time.time() - start:.2f} s")
 
-    # Predizione (Ricordarsi l'inverse_transform!)
+    # Predizione quantistica
     pred_scaled = vqr.predict(X_test)
+
+    # Riportiamo il risultato alla scala medica reale del diabete
     pred_real = y_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).ravel()
 
     mse_vqr = mean_squared_error(y_test, pred_real)
@@ -165,7 +187,7 @@ for name, depth, opt_type in runs:
 # ==========================================
 plt.figure(figsize=(18, 5))
 
-# Grafico 1: Curve di Loss a confronto (Tuning & Ottimizzatori)
+# Grafico 1: Curve di Loss a confronto
 plt.subplot(1, 3, 1)
 plt.plot(vqr_results['COBYLA_reps1']['loss'], label='COBYLA (reps=1)', color='lightblue')
 plt.plot(vqr_results['COBYLA_reps3']['loss'], label='COBYLA (reps=3)', color='blue')
@@ -176,7 +198,7 @@ plt.ylabel("Cost Function (MSE scalato)")
 plt.legend()
 plt.grid(True)
 
-# Grafico 2: Confronto MSE Finale (Tutti i modelli)
+# Grafico 2: Confronto MSE Finale
 plt.subplot(1, 3, 2)
 modelli = ['Lin. Reg', 'Rand. Forest', 'VQR (C-r1)', 'VQR (C-r3)', 'VQR (S-r3)']
 mse_values = [mse_lin, mse_rf, vqr_results['COBYLA_reps1']['mse'], vqr_results['COBYLA_reps3']['mse'],
@@ -189,7 +211,7 @@ plt.xticks(rotation=25)
 for i, v in enumerate(mse_values):
     plt.text(i, v + 50, f"{v:.0f}", ha='center')
 
-# Grafico 3: Dispersione - Reale vs Predetto per i modelli migliori
+# Grafico 3: Dispersione - Reale vs Predetto
 plt.subplot(1, 3, 3)
 plt.scatter(y_test, pred_rf, alpha=0.4, label='Random Forest', color='gray')
 plt.scatter(y_test, vqr_results['COBYLA_reps3']['predictions'], alpha=0.6, label='VQR COBYLA (r=3)', color='blue')
