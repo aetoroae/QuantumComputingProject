@@ -73,9 +73,30 @@ print(f"Random Forest       -> MSE: {mse_rf:.2f}")
 estimator = StatevectorEstimator()
 feature_map = zz_feature_map(feature_dimension=num_qubits, reps=2, entanglement='linear')
 
-# Ottimizzatori: 80 iterazioni per non appesantire troppo il calcolo
-opt_cobyla = COBYLA(maxiter=80)
-opt_spsa = SPSA(maxiter=80)
+
+# --- LA SOLUZIONE ELEGANTE (OOP Wrapper) ---
+# Creiamo una nostra versione di COBYLA che registra la funzione di costo (Loss)
+# senza usare hack o modifiche forzate. Eredita tutto dal COBYLA originale.
+class TrackedCOBYLA(COBYLA):
+    def __init__(self, loss_history_list, **kwargs):
+        super().__init__(**kwargs)
+        self.loss_history_list = loss_history_list
+
+    def minimize(self, fun, x0, jac=None, bounds=None, *args, **kwargs):
+        # Questa funzione "avvolge" la valutazione matematica del circuito
+        def wrapped_fun(x):
+            val = fun(x)
+            # Salviamo il numero puro (estraendolo se è un formato numpy)
+            val_scalar = val.item() if hasattr(val, 'item') else val
+            self.loss_history_list.append(val_scalar)
+            return val
+
+        # Passiamo la nostra funzione avvolta all'ottimizzatore vero e proprio
+        return super().minimize(wrapped_fun, x0, jac=jac, bounds=bounds, *args, **kwargs)
+
+
+# ---------------------------------------------
+
 
 # ==========================================
 # 5. ADDESTRAMENTO VQR (Le 3 Varianti)
@@ -83,28 +104,34 @@ opt_spsa = SPSA(maxiter=80)
 print("\n--- 2. Addestramento VQR Varianti ---")
 vqr_results = {}
 
-# Configurazione delle 3 run: (Nome, Profondità reps, Ottimizzatore)
+# Configurazione: indichiamo solo i nomi e il tipo di ottimizzatore da usare
 runs = [
-    ("COBYLA_reps1", 1, opt_cobyla),
-    ("COBYLA_reps3", 3, opt_cobyla),
-    ("SPSA_reps3", 3, opt_spsa)
+    ("COBYLA_reps1", 1, "COBYLA"),
+    ("COBYLA_reps3", 3, "COBYLA"),
+    ("SPSA_reps3", 3, "SPSA")
 ]
 
-for name, depth, optimizer in runs:
+for name, depth, opt_type in runs:
     print(f"\n> Addestramento {name} in corso...")
     ansatz = real_amplitudes(num_qubits=num_qubits, reps=depth)
 
     loss_history = []
 
+    # Assegnazione dinamica dell'ottimizzatore (Ricreato nuovo ogni volta!)
+    if opt_type == "COBYLA":
+        # Usiamo la nostra classe custom passandogli la lista vuota da riempire
+        optimizer = TrackedCOBYLA(loss_history_list=loss_history, maxiter=80)
+        callback = None  # Non ci serve il callback di Qiskit, fa tutto la classe
+    else:
+        # Per SPSA usiamo l'ottimizzatore standard
+        optimizer = SPSA(maxiter=80)
 
-    def callback(*args):
-        # Se l'ottimizzatore passa 2 argomenti (come COBYLA)
-        if len(args) == 2:
-            loss_history.append(args[1])
-        # Se l'ottimizzatore passa 5 argomenti (come SPSA)
-        elif len(args) == 5:
-            loss_history.append(args[2])  # In SPSA l'errore è il 3° parametro (indice 2)
 
+        def callback(*args):
+            if len(args) == 5:
+                val = args[2]
+                val_scalar = val.item() if hasattr(val, 'item') else val
+                loss_history.append(val_scalar)
 
     vqr = VQR(
         feature_map=feature_map,
