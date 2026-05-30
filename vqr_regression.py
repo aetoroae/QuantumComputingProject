@@ -22,47 +22,11 @@ from qiskit_algorithms.optimizers import COBYLA, SPSA
 from qiskit.primitives import StatevectorEstimator
 from qiskit_machine_learning.algorithms.regressors import VQR
 
-
 # ==========================================
 # 1. PREPROCESSING DATI (Dal tuo data_preprocessing.py)
 # ==========================================
-def load_and_preprocess_diabetes(n_qubits=4, test_size=0.2, random_state=42):
-    # 1. Caricamento del dataset da scikit-learn
-    diabetes = load_diabetes()
-    X = diabetes.data
-    y_reg = diabetes.target  # Target continuo (per regressione)
-
-    # 2. Creazione Target binario (per eventuale classificazione - VQC)
-    median_val = np.median(y_reg)
-    y_class = (y_reg > median_val).astype(int)
-
-    # 3. Standardizzazione delle feature
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    # 4. Riduzione dimensionale con PCA (10 feature -> n_qubits)
-    pca = PCA(n_components=n_qubits)
-    X_pca = pca.fit_transform(X_scaled)
-
-    # 5. Adattamento per i circuiti quantistici (Quantum Feature Map)
-    minmax = MinMaxScaler(feature_range=(0, 1))
-    X_quantum_ready = minmax.fit_transform(X_pca)
-
-    # 6. Split in Train e Test set per entrambi i modelli
-    X_train, X_test, y_class_train, y_class_test, y_reg_train, y_reg_test = train_test_split(
-        X_quantum_ready, y_class, y_reg, test_size=test_size, random_state=random_state
-    )
-
-    # Stampa la varianza spiegata per inserirla nella relazione
-    print(f"Dataset originale: {X.shape[1]} features.")
-    print(f"Varianza spiegata da {n_qubits} componenti principali (qubit): {sum(pca.explained_variance_ratio_):.2%}")
-
-    return {
-        "classification": (X_train, X_test, y_class_train, y_class_test),
-        "regression": (X_train, X_test, y_reg_train, y_reg_test),
-        "median_threshold": median_val
-    }
-
+# Importiamo il metodo già finito dal file data_preprocessing.py
+from data_preprocessing import load_and_preprocess_diabetes
 
 # Richiamiamo la tua funzione
 num_qubits = 4
