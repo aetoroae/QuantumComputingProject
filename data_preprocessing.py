@@ -1,9 +1,10 @@
 import numpy as np
+from matplotlib import pyplot as plt
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
-
+import pandas as pd
 
 def load_and_preprocess_diabetes(n_qubits=4, test_size=0.2, random_state=42):
     # 1. Caricamento del dataset da scikit-learn
@@ -47,8 +48,60 @@ def load_and_preprocess_diabetes(n_qubits=4, test_size=0.2, random_state=42):
     }
 
 
+def plot_pca_distribution(X_train, y_train):
+    plt.figure(figsize=(8, 6))
+
+    # Plottiamo le prime due componenti (colonna 0 e colonna 1)
+    scatter = plt.scatter(X_train[:, 0], X_train[:, 1],
+                          c=y_train, cmap='coolwarm', alpha=0.8, edgecolors='k')
+
+    plt.title('Distribuzione delle Classi (PCA - Prime 2 Componenti)', fontsize=14)
+    plt.xlabel('Componente Principale 1', fontsize=12)
+    plt.ylabel('Componente Principale 2', fontsize=12)
+
+    # Aggiungiamo la legenda
+    cbar = plt.colorbar(scatter, ticks=[0, 1])
+    cbar.set_ticklabels(['Classe 0 (Bassa Progr.)', 'Classe 1 (Alta Progr.)'])
+
+    # Salviamo l'immagine in alta qualità per LaTeX
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig('pca_distribution.pdf', format='pdf', bbox_inches='tight')
+
+    print("\nGrafico generato e salvato come 'pca_distribution.pdf'")
+    plt.show()
+
+
 # Test rapido dello script
 if __name__ == "__main__":
     data = load_and_preprocess_diabetes(n_qubits=4)
     print("Shape dati Train (X):", data["classification"][0].shape)
     print("Soglia mediana usata per la classificazione:", data["median_threshold"])
+
+    # 2. Estraiamo i dati di training per la classificazione
+    X_train, X_test, y_class_train, y_class_test = data["classification"]
+
+    # 3. Stampiamo le dimensioni per sicurezza
+    print("\n--- DIMENSIONI DEI TENSORI ---")
+    print(f"X_train (Feature): {X_train.shape} -> 353 righe, 4 colonne (qubit)")
+    print(f"y_train (Target):  {y_class_train.shape}")
+
+    # 4. Creiamo un DataFrame Pandas per stamparlo in formato tabella
+    # Diamo un nome alle 4 colonne (che diventeranno i nostri 4 qubit)
+    col_names = [f"PCA_Component_{i + 1}" for i in range(4)]
+
+    df_visual = pd.DataFrame(X_train, columns=col_names)
+
+    # Aggiungiamo la colonna del target per vedere a quale classe appartengono
+    df_visual['Target_Classe (0=Bassa, 1=Alta)'] = y_class_train
+
+    print("\n--- PRIME 5 RIGHE DEL DATASET (Pronto per il circuito quantistico) ---")
+    print(df_visual.head())
+
+    plot_pca_distribution(X_train,y_class_train)
+
+    # Disabilita il limite delle colonne e allarga la "finestra" virtuale di stampa
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
+
+    print("\n--- PRIME 5 RIGHE DEL DATASET ---")
+    print(df_visual.head())
