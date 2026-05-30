@@ -32,7 +32,7 @@ Il file `data_preprocessing.py` costituisce il modulo condiviso tra tutti i memb
 ---
 
 ## 2. Modulo A: Variational Quantum Regression (VQR)
-*(Sviluppato da: [Tuo Nome/Username])*
+*(Sviluppato da: Giuseppe Antonio Arcuri)*
 
 Questa sezione si occupa di prevedere l'avanzamento quantitativo della malattia analizzando il target continuo tramite la classe `VQR` di Qiskit.
 
@@ -51,13 +51,9 @@ Il modulo implementa un sistema di Benchmark (attraverso un OOP Wrapper custom) 
 ---
 
 ## 3. Modulo B: Variational Quantum Classification (VQC)
-*(Sviluppato da: [Nome del tuo collega / Placeholder])*
+*(Sviluppato da: Samuele Epiceno)*
 
-> **[ATTENZIONE TEAM: Inserire qui la documentazione del VQC]**
-> * *Descrivere la struttura del VQC (es. Sampler invece di Estimator).*
-> * *Descrivere la funzione di costo (es. Cross-Entropy).*
-> * *Descrivere l'Ansatz utilizzato o le differenze rispetto alla regressione.*
-> * *Inserire i risultati di classificazione (Accuracy, F1-Score).*
+> **In sviluppo**
 
 ---
 
