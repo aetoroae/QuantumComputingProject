@@ -90,7 +90,7 @@ class QuantumDiabetesClassifier:
             
         return accuracy_score(test_labels, predictions), predictions
 
-    def evaluate_noisy(self, test_data, test_labels, noise_level=0.05):
+    def evaluate_noisy(self, test_data, test_labels, noise_level=0.15):
         print(f"\n[2] Valutazione su Hardware Rumoroso (Errore CX: {noise_level*100}%)...")
         
         # Creazione del modello di rumore quantistico
@@ -146,11 +146,11 @@ if __name__ == "__main__":
     print(f" RISULTATI FINALI (ZFeatureMap + RealAmplitudes)")
     print("="*50)
     print(f" Accuracy Ideale (Simulatore Perfetto): {acc_ideal*100:.2f}%")
-    print(f" Accuracy Reale  (Rumore IBM al 5%):    {acc_noisy*100:.2f}%")
+    print(f" Accuracy Reale  (Rumore IBM al 15%):    {acc_noisy*100:.2f}%")
     
     # PLOT: Grafico a Barre Comparativo
     plt.figure(figsize=(7, 5))
-    bars = plt.bar(['Ideale (Senza Rumore)', 'Rumoroso (Errore 5%)'], [acc_ideal, acc_noisy], color=['#1f77b4', '#d62728'])
+    bars = plt.bar(['Ideale (Senza Rumore)', 'Rumoroso (Errore 15%)'], [acc_ideal, acc_noisy], color=['#1f77b4', '#d62728'])
     plt.ylabel('Test Accuracy')
     plt.title('Resilienza al Rumore Hardware (NISQ)\nModello: ZFeatureMap + RealAmplitudes')
     plt.ylim(0, 1.0)
