@@ -27,7 +27,7 @@ data_dict = load_and_preprocess_diabetes(n_qubits=num_qubits)
 
 X_train, X_test, y_train, y_test = data_dict["regression"]
 
-#  SCALING DEL TARGET (Fondamentale)
+#  SCALING DEL TARGET
 y_scaler = MinMaxScaler(feature_range=(-1, 1))
 y_train_scaled = y_scaler.fit_transform(y_train.reshape(-1, 1)).ravel()
 
