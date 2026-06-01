@@ -53,9 +53,17 @@ Il modulo implementa un sistema di Benchmark (attraverso un OOP Wrapper custom) 
 ## 3. Modulo B: Variational Quantum Classification (VQC)
 *(Sviluppato da: Samuele Epiceno)*
 
-> **In sviluppo**
+Questa sezione affronta la predizione del rischio clinico trattando il dataset come un problema di classificazione binaria (progressione bassa vs progressione alta), implementando un classificatore variazionale custom ottimizzato per i limiti fisici dell'era NISQ.
 
----
+### 🏗️ Architettura del Modello
+* **Data Encoding (Vincitore Grid Search):** `ZFeatureMap` (4 Qubit, `reps=1`). A differenza della regressione, per la classificazione si è rivelata vincente una mappa puramente lineare ed *entanglement-free*. L'assenza totale di porte CNOT nell'encoding minimizza il *cumulative gate error* e i tempi fisici di esecuzione.
+* **Ansatz:** `RealAmplitudes` (4 Qubit, `reps=2`). Architettura *Hardware-Efficient* mantenuta volutamente a bassa profondità (shallow circuit) per prevenire il collasso prematuro dello stato quantistico a causa della decoerenza termica.
+* **Misurazione e Interprete:** Utilizzo delle primitive `Sampler` per estrarre i conteggi (shots) e le relative distribuzioni di probabilità delle stringhe binarie. La classificazione finale nelle due classi cliniche (0 o 1) avviene tramite il calcolo della parità logica (*Hamming weight*).
+
+### ⚙️ Validazione NISQ e Proof of Concept su QPU IBM
+Oltre all'addestramento ibrido ideale (guidato con successo dall'algoritmo *derivative-free* **COBYLA** minimizzando la *Cross-Entropy/Log-Loss*), questo modulo spinge il modello contro le reali limitazioni dell'hardware odierno:
+1. **Simulazione della Decoerenza:** Implementazione di un modello matematico di rumore (*Depolarizing Channel*) tramite `Qiskit AerSimulator`. È stato iniettato un severo tasso di errore del 15% sulle porte logiche a due qubit (CX), dimostrando empiricamente che il circuito mantiene un solido potere predittivo (battendo il *random guess*) nonostante il degrado termico simulato.
+2. **Esecuzione su Hardware Reale (`ibm_kyiv`):** Transpilazione topologica del circuito astratto in istruzioni ISA e sottomissione asincrona al chip fisico a superconduttori IBM a 127 qubit. Separando furbamente l'addestramento (locale) dall'inferenza (in cloud), sono state eluse le lunghissime code di rete. L'hardware ha processato e classificato con successo il micro-batch di test clinico senza incorrere in crash di calibrazione.
 
 ## 4. Prerequisiti e Installazione
 Assicurati di avere Python 3.10 o superiore. Crea un ambiente virtuale e installa le dipendenze richieste:
