@@ -7,7 +7,6 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-# --- Moduli Classici ---
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -16,34 +15,23 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.decomposition import PCA
 
-# --- Moduli Quantistici ---
 from qiskit.circuit.library import zz_feature_map, real_amplitudes
 from qiskit_algorithms.optimizers import COBYLA, SPSA
 from qiskit.primitives import StatevectorEstimator
 from qiskit_machine_learning.algorithms.regressors import VQR
 
-# ==========================================
-# 1. PREPROCESSING DATI (Dal tuo data_preprocessing.py)
-# ==========================================
-# Importiamo il metodo già finito dal file data_preprocessing.py
 from data_preprocessing import load_and_preprocess_diabetes
 
-# Richiamiamo la tua funzione
 num_qubits = 4
 data_dict = load_and_preprocess_diabetes(n_qubits=num_qubits)
 
-# Estraiamo SOLTANTO i dati di regressione per questo specifico script
 X_train, X_test, y_train, y_test = data_dict["regression"]
 
-# ==========================================
-# 2. SCALING DEL TARGET (Fondamentale)
-# ==========================================
+#  SCALING DEL TARGET (Fondamentale)
 y_scaler = MinMaxScaler(feature_range=(-1, 1))
 y_train_scaled = y_scaler.fit_transform(y_train.reshape(-1, 1)).ravel()
 
-# ==========================================
-# 3. BENCHMARK CLASSICO
-# ==========================================
+
 print("\n--- 1. Addestramento Modelli Classici ---")
 # Regressione Lineare
 lin_reg = LinearRegression().fit(X_train, y_train)
@@ -58,14 +46,11 @@ mse_rf = mean_squared_error(y_test, pred_rf)
 print(f"Regressione Lineare -> MSE: {mse_lin:.2f}")
 print(f"Random Forest       -> MSE: {mse_rf:.2f}")
 
-# ==========================================
-# 4. CONFIGURAZIONE QUANTISTICA BASE E OOP WRAPPER
-# ==========================================
+
 estimator = StatevectorEstimator()
 feature_map = zz_feature_map(feature_dimension=num_qubits, reps=2, entanglement='linear')
 
 
-# --- LA SOLUZIONE ELEGANTE (OOP Wrapper) ---
 class TrackedCOBYLA(COBYLA):
     def __init__(self, loss_history_list, **kwargs):
         super().__init__(**kwargs)
@@ -81,12 +66,7 @@ class TrackedCOBYLA(COBYLA):
         return super().minimize(wrapped_fun, x0, jac=jac, bounds=bounds, *args, **kwargs)
 
 
-# ---------------------------------------------
 
-
-# ==========================================
-# 5. ADDESTRAMENTO VQR (Le 3 Varianti)
-# ==========================================
 print("\n--- 2. Addestramento VQR Varianti ---")
 vqr_results = {}
 
@@ -146,9 +126,7 @@ for name, depth, opt_type in runs:
     }
     print(f"  Risultato -> MSE: {mse_vqr:.2f} | R2: {r2_vqr:.2f}")
 
-# ==========================================
-# 6. VISUALIZZAZIONE RISULTATI
-# ==========================================
+# VISUALIZZAZIONE RISULTATI
 plt.figure(figsize=(18, 5))
 
 # Grafico 1: Curve di Loss a confronto

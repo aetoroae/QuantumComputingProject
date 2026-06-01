@@ -1,18 +1,12 @@
-# =============================================================================
-# ESECUZIONE SU VERO HARDWARE IBM QUANTUM (PROOF OF CONCEPT)
-# =============================================================================
 import numpy as np
-import time
 
-# Qiskit base
 from qiskit.circuit.library import ZFeatureMap, RealAmplitudes
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from scipy.optimize import minimize
 
-# Qiskit IBM Runtime (Per comunicare col computer reale)
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 
-# 1. AUTENTICAZIONE (INCOLLA QUI IL TUO TOKEN)
+# 1. AUTENTICAZIONE
 IBM_TOKEN = "segreta"
 
 print("[1] Autenticazione ai server IBM in corso...")
@@ -22,14 +16,12 @@ service = QiskitRuntimeService(channel="ibm_quantum_platform", token=IBM_TOKEN)
 backend = service.least_busy(operational=True, simulator=False, min_num_qubits=4)
 print(f" -> Connesso con successo! Il computer selezionato è: {backend.name}")
 
-# Import dei dati (Dal tuo file)
+# Import dei dati
 from data_preprocessing import load_and_preprocess_diabetes
 data = load_and_preprocess_diabetes(n_qubits=4)
 X_train, X_test, y_class_train, y_class_test = data["classification"]
 
-# =============================================================================
-# 2. ADDESTRAMENTO LOCALE (SUL MAC)
-# =============================================================================
+# 2. ADDESTRAMENTO LOCALE
 print("\n[2] Addestramento locale del modello in corso (Mac M4)...")
 feature_map = ZFeatureMap(feature_dimension=4, reps=1)
 ansatz = RealAmplitudes(4, entanglement='circular', reps=2)
@@ -65,16 +57,14 @@ def get_cost(params, x_data, y_data):
         cost -= (y_true * np.log(prob_1) + (1 - y_true) * np.log(1 - prob_1))
     return cost / len(x_data)
 
-# Training lampo (30 iterazioni su un piccolo subset per fare in fretta)
+# Training
 init_params = np.random.uniform(0, 2*np.pi, ansatz.num_parameters)
 res = minimize(lambda p: get_cost(p, X_train[:30], y_class_train[:30]), init_params, method='COBYLA', options={'maxiter': 30})
 optimal_params = res.x
 print(" -> Addestramento completato. Pesi ottimali congelati.")
 
-# =============================================================================
 # 3. PREPARAZIONE E INVIO AL VERO COMPUTER IBM
-# =============================================================================
-# Prendiamo SOLO 5 PAZIENTI di test (Proof of Concept)
+# Prendiamo SOLO 5 PAZIENTI di test
 n_samples = 5
 X_poc = X_test[:n_samples]
 y_poc = y_class_test[:n_samples]
@@ -87,7 +77,7 @@ for point in X_poc:
     for i, p in enumerate(ansatz.ordered_parameters): parameters[p] = optimal_params[i]
     test_circuits.append(circuit.assign_parameters(parameters))
 
-# "Transpilazione" (Traduzione del circuito nella lingua fisica del chip IBM)
+# Transpilazione
 pm = generate_preset_pass_manager(optimization_level=1, backend=backend)
 isa_circuits = pm.run(test_circuits)
 

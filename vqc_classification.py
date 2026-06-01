@@ -1,6 +1,3 @@
-# =============================================================================
-# IMPORT NECESSARI
-# =============================================================================
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,18 +9,13 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              f1_score, confusion_matrix, log_loss)
 from scipy.optimize import minimize
 
-# Qiskit imports
 from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
 from qiskit.circuit.library import RealAmplitudes, TwoLocal, EfficientSU2
 from qiskit.primitives import StatevectorSampler
 
-# Import personalizzato per il preprocessing
 from data_preprocessing import load_and_preprocess_diabetes
 
-
-# =============================================================================
-# 1. FUNZIONI DI CREAZIONE CIRCUITI (ENCODING E ANSATZ)
-# =============================================================================
+# FUNZIONI DI CREAZIONE CIRCUITI (ENCODING E ANSATZ)
 def create_encoding_circuits(n_qubits):
     """Crea i diversi tipi di encoding quantistico (3 configurazioni)"""
     encodings = {}
@@ -42,9 +34,6 @@ def create_ansatz_circuits(n_qubits):
     return ansatz_dict
 
 
-# =============================================================================
-# 2. CLASSE PRINCIPALE: QUANTUM DIABETES CLASSIFIER
-# =============================================================================
 class QuantumDiabetesClassifier:
     def __init__(self, feature_map, ansatz):
         self.feature_map = feature_map
@@ -141,9 +130,6 @@ class QuantumDiabetesClassifier:
         return accuracy, predictions
 
 
-# =============================================================================
-# 3. RUNNER E ANALIZZATORE ESPERIMENTI (CON SALVATAGGIO AUTOMATICO)
-# =============================================================================
 def run_comparative_experiments(train_features, train_labels, test_features, test_labels, n_qubits, target_names):
     """Esegue la Grid Search completa (27 esperimenti) e salva i risultati in una cartella"""
 
@@ -257,9 +243,6 @@ def analyze_results(results, n_components):
               f"{row['test_accuracy']:<8.4f} {row['training_time']:<7.1f}")
 
 
-# =============================================================================
-# 4. MAIN EXECUTION
-# =============================================================================
 if __name__ == "__main__":
     # 1. Caricamento dati dal tuo file di preprocessing esterno
     n_qubits = 4

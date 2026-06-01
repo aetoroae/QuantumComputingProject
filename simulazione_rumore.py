@@ -1,16 +1,10 @@
-# =============================================================================
-# ESPERIMENTO FINALE: TEST DI RESILIENZA AL RUMORE QUANTISTICO (NISQ)
-# =============================================================================
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import os
-import time
 
 from sklearn.metrics import accuracy_score, confusion_matrix, log_loss
 from scipy.optimize import minimize
 
-# Qiskit base imports
 from qiskit.circuit.library import ZFeatureMap, RealAmplitudes
 from qiskit.primitives import StatevectorSampler
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
@@ -19,12 +13,9 @@ from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, depolarizing_error
 
-# Il tuo file di preprocessing
 from data_preprocessing import load_and_preprocess_diabetes
 
-# =============================================================================
-# 1. CLASSE CLASSIFICATORE (Semplificata per il modello vincente)
-# =============================================================================
+
 class QuantumDiabetesClassifier:
     def __init__(self, n_qubits):
         self.feature_map = ZFeatureMap(feature_dimension=n_qubits, reps=1)
@@ -119,9 +110,7 @@ class QuantumDiabetesClassifier:
             
         return accuracy_score(test_labels, predictions), predictions
 
-# =============================================================================
-# 2. ESECUZIONE E PLOT
-# =============================================================================
+#  ESECUZIONE E PLOT
 if __name__ == "__main__":
     
     # Crea cartella output
