@@ -6,29 +6,29 @@ from scipy.optimize import minimize
 
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 
-# 1. AUTENTICAZIONE
+#Autenticazione
 IBM_TOKEN = "segreta"
 
 print("[1] Autenticazione ai server IBM in corso...")
 service = QiskitRuntimeService(channel="ibm_quantum_platform", token=IBM_TOKEN)
 
-# Trova in automatico il computer reale con la coda più corta
+#Trova in automatico il computer reale con la coda più corta
 backend = service.least_busy(operational=True, simulator=False, min_num_qubits=4)
 print(f" -> Connesso con successo! Il computer selezionato è: {backend.name}")
 
-# Import dei dati
+#Import dei dati
 from data_preprocessing import load_and_preprocess_diabetes
 data = load_and_preprocess_diabetes(n_qubits=4)
 X_train, X_test, y_class_train, y_class_test = data["classification"]
 
-# 2. ADDESTRAMENTO LOCALE
+#Addestramento locale
 print("\n[2] Addestramento locale del modello in corso (Mac M4)...")
 feature_map = ZFeatureMap(feature_dimension=4, reps=1)
 ansatz = RealAmplitudes(4, entanglement='circular', reps=2)
 circuit = feature_map.compose(ansatz)
 circuit.measure_all()
 
-# Usiamo il simulatore locale per il training
+#Usiamo il simulatore locale per il training
 from qiskit.primitives import StatevectorSampler
 local_sampler = StatevectorSampler()
 
@@ -36,7 +36,7 @@ def interpreter(bitstring):
     return sum(int(k) for k in list(bitstring)) % 2  
 
 def get_cost(params, x_data, y_data):
-    # Creazione circuiti
+    #Creazione circuiti
     bound_circuits = []
     for point in x_data:
         parameters = {}
@@ -44,7 +44,7 @@ def get_cost(params, x_data, y_data):
         for i, p in enumerate(ansatz.ordered_parameters): parameters[p] = params[i]
         bound_circuits.append(circuit.assign_parameters(parameters))
     
-    # Esecuzione locale
+    #Esecuzione locale
     results = local_sampler.run(bound_circuits).result()
     cost = 0
     for i, res in enumerate(results):
@@ -52,19 +52,19 @@ def get_cost(params, x_data, y_data):
         shots = sum(counts.values())
         prob_1 = sum(counts[k] for k in counts if interpreter(k) == 1) / shots
         y_true = y_data[i]
-        # Cross-entropy semplificata
+        #Cross-entropy semplificata
         prob_1 = max(min(prob_1, 0.999), 0.001)
         cost -= (y_true * np.log(prob_1) + (1 - y_true) * np.log(1 - prob_1))
     return cost / len(x_data)
 
-# Training
+#Training
 init_params = np.random.uniform(0, 2*np.pi, ansatz.num_parameters)
 res = minimize(lambda p: get_cost(p, X_train[:30], y_class_train[:30]), init_params, method='COBYLA', options={'maxiter': 30})
 optimal_params = res.x
 print(" -> Addestramento completato. Pesi ottimali congelati.")
 
-# 3. PREPARAZIONE E INVIO AL VERO COMPUTER IBM
-# Prendiamo SOLO 5 PAZIENTI di test
+#PREPARAZIONE E INVIO AL VERO COMPUTER IBM
+#Prendiamo SOLO 5 PAZIENTI di test
 n_samples = 5
 X_poc = X_test[:n_samples]
 y_poc = y_class_test[:n_samples]
@@ -77,7 +77,7 @@ for point in X_poc:
     for i, p in enumerate(ansatz.ordered_parameters): parameters[p] = optimal_params[i]
     test_circuits.append(circuit.assign_parameters(parameters))
 
-# Transpilazione
+#Transpilazione
 pm = generate_preset_pass_manager(optimization_level=1, backend=backend)
 isa_circuits = pm.run(test_circuits)
 
@@ -93,7 +93,7 @@ print("ATTENZIONE: Potrebbero volerci minuti o ore a seconda della coda globale.
 print("Non chiudere il programma se vuoi vedere i risultati qui sotto.\n")
 
 try:
-    # Questo comando mette Python in pausa finché IBM non ha finito
+    #Questo comando mette Python in pausa finché IBM non ha finito
     result = job.result()
     print("\n ESECUZIONE FISICA COMPLETATA!")
     

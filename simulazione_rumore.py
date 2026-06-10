@@ -9,7 +9,7 @@ from qiskit.circuit.library import ZFeatureMap, RealAmplitudes
 from qiskit.primitives import StatevectorSampler
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
-# Qiskit Aer (per la simulazione del rumore hardware)
+#Qiskit Aer (per la simulazione del rumore hardware)
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, depolarizing_error
 
@@ -84,22 +84,22 @@ class QuantumDiabetesClassifier:
     def evaluate_noisy(self, test_data, test_labels, noise_level=0.15):
         print(f"\n[2] Valutazione su Hardware Rumoroso (Errore CX: {noise_level*100}%)...")
         
-        # Creazione del modello di rumore quantistico
+        #Creazione del modello di rumore quantistico
         noise_model = NoiseModel()
-        # Errore dell'1% sulle porte a singolo qubit (es. rotazioni)
+        #Errore dell'1% sulle porte a singolo qubit (es. rotazioni)
         error_1q = depolarizing_error(noise_level / 5, 1)
-        # Errore del 5% (variabile) sulle porte di entanglement a 2 qubit (CNOT)
+        #Errore del 5% (variabile) sulle porte di entanglement a 2 qubit (CNOT)
         error_2q = depolarizing_error(noise_level, 2)
         
         noise_model.add_all_qubit_quantum_error(error_1q, ['ry', 'rz', 'h', 'x'])
         noise_model.add_all_qubit_quantum_error(error_2q, ['cx', 'cz'])
         
-        # Setup del simulatore Aer con rumore
+        #Setup del simulatore Aer con rumore
         sim = AerSimulator(noise_model=noise_model)
         pm = generate_preset_pass_manager(optimization_level=1, backend=sim)
         
         predictions = []
-        # Valutazione punto per punto
+        #Valutazione punto per punto
         for point in test_data:
             bound_circ = self.circuit_instance(point, self.optimal_params)
             transpiled_circ = pm.run(bound_circ)
@@ -110,10 +110,10 @@ class QuantumDiabetesClassifier:
             
         return accuracy_score(test_labels, predictions), predictions
 
-#  ESECUZIONE E PLOT
+#ESECUZIONE E PLOT
 if __name__ == "__main__":
     
-    # Crea cartella output
+    #Crea cartella output
     output_dir = "classificazione_vqc"
     os.makedirs(output_dir, exist_ok=True)
     
@@ -124,10 +124,10 @@ if __name__ == "__main__":
     
     classifier = QuantumDiabetesClassifier(n_qubits)
     
-    # Addestramento
+    #Addestramento
     classifier.train_ideal(X_train, y_class_train)
     
-    # Test Ideale vs Reale
+    #Test Ideale vs Reale
     acc_ideal, pred_ideal = classifier.evaluate_ideal(X_test, y_class_test)
     acc_noisy, pred_noisy = classifier.evaluate_noisy(X_test, y_class_test, noise_level=0.05)
     
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     print(f" Accuracy Ideale (Simulatore Perfetto): {acc_ideal*100:.2f}%")
     print(f" Accuracy Reale  (Rumore IBM al 15%):    {acc_noisy*100:.2f}%")
     
-    # PLOT: Grafico a Barre Comparativo
+    #Grafico a Barre Comparativo
     plt.figure(figsize=(7, 5))
     bars = plt.bar(['Ideale (Senza Rumore)', 'Rumoroso (Errore 15%)'], [acc_ideal, acc_noisy], color=['#1f77b4', '#d62728'])
     plt.ylabel('Test Accuracy')
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     plt.axhline(y=0.5, color='k', linestyle='--', alpha=0.5, label='Random Guess (50%)')
     plt.legend()
     
-    # Aggiungi i valori sopra le barre
+    #Aggiungi i valori sopra le barre
     for bar in bars:
         yval = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2, yval + 0.02, f'{yval*100:.1f}%', ha='center', va='bottom', fontweight='bold')

@@ -1,7 +1,6 @@
 import numpy as np
 import time
 
-# --- Configurazione per forzare la finestra esterna dei grafici ---
 import matplotlib
 
 matplotlib.use('TkAgg')
@@ -27,18 +26,18 @@ data_dict = load_and_preprocess_diabetes(n_qubits=num_qubits)
 
 X_train, X_test, y_train, y_test = data_dict["regression"]
 
-#  SCALING DEL TARGET
+#SCALING DEL TARGET
 y_scaler = MinMaxScaler(feature_range=(-1, 1))
 y_train_scaled = y_scaler.fit_transform(y_train.reshape(-1, 1)).ravel()
 
 
 print("\n--- 1. Addestramento Modelli Classici ---")
-# Regressione Lineare
+#Regressione Lineare
 lin_reg = LinearRegression().fit(X_train, y_train)
 pred_lin = lin_reg.predict(X_test)
 mse_lin = mean_squared_error(y_test, pred_lin)
 
-# Random Forest
+#Random Forest
 rf_reg = RandomForestRegressor(n_estimators=100, random_state=42).fit(X_train, y_train)
 pred_rf = rf_reg.predict(X_test)
 mse_rf = mean_squared_error(y_test, pred_rf)
@@ -70,7 +69,7 @@ class TrackedCOBYLA(COBYLA):
 print("\n--- 2. Addestramento VQR Varianti ---")
 vqr_results = {}
 
-# Configurazione: indichiamo solo i nomi e il tipo di ottimizzatore da usare
+#Configurazione: indichiamo solo i nomi e il tipo di ottimizzatore da usare
 runs = [
     ("COBYLA_reps1", 1, "COBYLA"),
     ("COBYLA_reps3", 3, "COBYLA"),
@@ -83,7 +82,7 @@ for name, depth, opt_type in runs:
 
     loss_history = []
 
-    # Assegnazione dinamica dell'ottimizzatore
+    #Assegnazione dinamica dell'ottimizzatore
     if opt_type == "COBYLA":
         optimizer = TrackedCOBYLA(loss_history_list=loss_history, maxiter=80)
         callback = None
@@ -109,10 +108,10 @@ for name, depth, opt_type in runs:
     vqr.fit(X_train, y_train_scaled)
     print(f"  Completato in {time.time() - start:.2f} s")
 
-    # Predizione quantistica
+    #Predizione quantistica
     pred_scaled = vqr.predict(X_test)
 
-    # Riportiamo il risultato alla scala medica reale del diabete
+    #Riportiamo il risultato alla scala medica reale del diabete
     pred_real = y_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).ravel()
 
     mse_vqr = mean_squared_error(y_test, pred_real)
@@ -126,10 +125,10 @@ for name, depth, opt_type in runs:
     }
     print(f"  Risultato -> MSE: {mse_vqr:.2f} | R2: {r2_vqr:.2f}")
 
-# VISUALIZZAZIONE RISULTATI
+#VISUALIZZAZIONE RISULTATI
 plt.figure(figsize=(18, 5))
 
-# Grafico 1: Curve di Loss a confronto
+#Grafico 1: Curve di Loss a confronto
 plt.subplot(1, 3, 1)
 plt.plot(vqr_results['COBYLA_reps1']['loss'], label='COBYLA (reps=1)', color='lightblue')
 plt.plot(vqr_results['COBYLA_reps3']['loss'], label='COBYLA (reps=3)', color='blue')
@@ -140,7 +139,7 @@ plt.ylabel("Cost Function (MSE scalato)")
 plt.legend()
 plt.grid(True)
 
-# Grafico 2: Confronto MSE Finale
+#Grafico 2: Confronto MSE Finale
 plt.subplot(1, 3, 2)
 modelli = ['Lin. Reg', 'Rand. Forest', 'VQR (C-r1)', 'VQR (C-r3)', 'VQR (S-r3)']
 mse_values = [mse_lin, mse_rf, vqr_results['COBYLA_reps1']['mse'], vqr_results['COBYLA_reps3']['mse'],
@@ -153,7 +152,7 @@ plt.xticks(rotation=25)
 for i, v in enumerate(mse_values):
     plt.text(i, v + 50, f"{v:.0f}", ha='center')
 
-# Grafico 3: Dispersione - Reale vs Predetto
+#Grafico 3: Dispersione - Reale vs Predetto
 plt.subplot(1, 3, 3)
 plt.scatter(y_test, pred_rf, alpha=0.4, label='Random Forest', color='gray')
 plt.scatter(y_test, vqr_results['COBYLA_reps3']['predictions'], alpha=0.6, label='VQR COBYLA (r=3)', color='blue')

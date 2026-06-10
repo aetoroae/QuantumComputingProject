@@ -15,7 +15,7 @@ from qiskit.primitives import StatevectorSampler
 
 from data_preprocessing import load_and_preprocess_diabetes
 
-# FUNZIONI DI CREAZIONE CIRCUITI (ENCODING E ANSATZ)
+#FUNZIONI DI CREAZIONE CIRCUITI (ENCODING E ANSATZ)
 def create_encoding_circuits(n_qubits):
     """Crea i diversi tipi di encoding quantistico (3 configurazioni)"""
     encodings = {}
@@ -133,7 +133,7 @@ class QuantumDiabetesClassifier:
 def run_comparative_experiments(train_features, train_labels, test_features, test_labels, n_qubits, target_names):
     """Esegue la Grid Search completa (27 esperimenti) e salva i risultati in una cartella"""
 
-    # Crea la cartella per i risultati se non esiste
+    #Crea la cartella per i risultati se non esiste
     output_dir = "risultati_vqc"
     os.makedirs(output_dir, exist_ok=True)
     print(f"\n[INFO] Grafici e score verranno salvati nella cartella: '{output_dir}'")
@@ -145,7 +145,7 @@ def run_comparative_experiments(train_features, train_labels, test_features, tes
     encodings = create_encoding_circuits(n_qubits)
     ansatz_circuits = create_ansatz_circuits(n_qubits)
 
-    # I 3 OTTIMIZZATORI RIPRISTINATI
+    #I 3 OTTIMIZZATORI RIPRISTINATI
     optimizers = ['COBYLA', 'L_BFGS_B', 'SLSQP']
 
     results = []
@@ -161,7 +161,7 @@ def run_comparative_experiments(train_features, train_labels, test_features, tes
 
                 classifier = QuantumDiabetesClassifier(encoding, ansatz)
 
-                print("Addestramento in corso (potrebbe richiedere tempo)...")
+                print("Addestramento in corso...")
                 train_results = classifier.train(
                     train_features, train_labels,
                     optimizer=optimizer,
@@ -182,7 +182,7 @@ def run_comparative_experiments(train_features, train_labels, test_features, tes
 
                 experiment_title = f"{enc_name}_{ans_name}_{optimizer}"
 
-                # Plot e Salvataggio Confusion Matrix (In alta definizione per la relazione)
+                #Plot e Salvataggio Confusion Matrix
                 cm = confusion_matrix(test_labels, test_pred)
                 plt.figure(figsize=(6, 4))
                 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yticklabels=target_names)
@@ -193,7 +193,7 @@ def run_comparative_experiments(train_features, train_labels, test_features, tes
                 plt.show()
                 plt.close()
 
-                # Plot e Salvataggio curva di convergenza della Loss
+                #Plot e Salvataggio curva di convergenza della Loss
                 if len(classifier.history) > 1:
                     plt.figure(figsize=(6, 4))
                     plt.plot(classifier.history, 'b-', linewidth=2)
@@ -244,19 +244,19 @@ def analyze_results(results, n_components):
 
 
 if __name__ == "__main__":
-    # 1. Caricamento dati dal tuo file di preprocessing esterno
+    #Caricamento dati dal tuo file di preprocessing esterno
     n_qubits = 4
     data = load_and_preprocess_diabetes(n_qubits=n_qubits)
     X_train, X_test, y_class_train, y_class_test = data["classification"]
 
-    target_names = ['Bassa Progr.', 'Alta Progr.']  # Classificazione binaria per il Diabetes binarizzato
+    target_names = ['Bassa Progr.', 'Alta Progr.']  #Classificazione binaria per il Diabetes binarizzato
 
-    # 2. Avvio degli esperimenti quantistici controllati (27 totali)
+    #Avvio degli esperimenti quantistici controllati (27 totali)
     quantum_results = run_comparative_experiments(
         X_train, y_class_train,
         X_test, y_class_test,
         n_qubits, target_names
     )
 
-    # 3. Analisi e generazione dei report finali
+    #Analisi e generazione dei report finali
     analyze_results(quantum_results, n_qubits)
